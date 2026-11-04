@@ -1,0 +1,379 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Light Night Stage Clock</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Light Night">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout (iPad Air, 820×1180 pt minus Safari bars): one screen, never scrolls.
+   Clock band on top, then two lanes. Landscape: VJ | DJ side by side. Portrait: VJ above DJ,
+   each lane laid out horizontally (now | next). Lane contents scale with container units.
+   Pure black, dimmed colours: read at night in a dark hall. */
+:root{
+  --bg:#000;
+  --line:#1c1c22;
+  --fg:#c9ccd4;
+  --muted:#5f6370;
+  --dim:#3a3d46;
+  --amber:#c98a3a;   /* VJ lane */
+  --blue:#4d86c9;    /* DJ lane */
+  --crit:#d2483e;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;background:#000;overflow:hidden;overscroll-behavior:none}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);margin:0;
+  -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;touch-action:manipulation;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
+.app{-webkit-user-select:none;user-select:none;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:clamp(8px,1.4vh,16px)}
+.lbl{font-family:var(--mono);font-size:clamp(10px,1.3vmin,13px);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* clock: limited by width AND height so it never eats the lanes */
+.clock{border-bottom:1px solid var(--line);padding-bottom:clamp(2px,.8vh,10px);min-width:0}
+.clock-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.clock-top .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clock-time{font-variation-settings:"wdth" 125;font-weight:800;font-variant-numeric:tabular-nums;
+  font-size:120px;line-height:.92;letter-spacing:-.02em;text-align:center;white-space:nowrap;color:var(--fg);overflow:hidden}
+.clock-time #clockTxt{display:inline-block}
+.clock-time .sec{color:var(--dim);font-weight:500}
+.tools{display:flex;gap:8px;flex:none}
+button{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:#000;
+  border:1px solid var(--line);border-radius:8px;min-height:40px;padding:0 14px;cursor:pointer;touch-action:manipulation}
+button:active{color:var(--fg);border-color:var(--muted)}
+button:focus-visible{outline:1px solid var(--muted);outline-offset:2px}
+@media (hover:hover){button:hover{color:var(--fg);border-color:var(--muted)}}
+
+/* lanes */
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);min-height:0}
+@media (orientation:portrait){.lanes{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+.lane{--acc:var(--blue);--pulse:#8cc4ff;container:lane/size;min-width:0;min-height:0}
+.lane[data-lane="VJ"]{--acc:var(--amber);--pulse:#ffc93c}
+.lane-in{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:clamp(6px,2.2cqh,14px)}
+.lane-head{display:flex;align-items:center;gap:10px}
+.lane-tag{font:700 clamp(13px,4cqmin,20px) var(--mono);letter-spacing:.2em;color:var(--acc)}
+.lane-head::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.now{border:1px solid var(--line);border-top:3px solid var(--state,var(--acc));border-radius:10px;
+  padding:clamp(10px,3.5cqmin,22px);display:flex;flex-direction:column;gap:clamp(2px,1.4cqh,10px);min-height:0;overflow:hidden;background-color:#000}
+.name{font-variation-settings:"wdth" 80;font-weight:800;line-height:1;text-wrap:balance;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.now .name{font-size:clamp(26px,4.5vmin,76px);font-size:clamp(26px,9cqmin,76px)}
+.until{font-size:clamp(14px,1.8vmin,26px);font-size:clamp(14px,3.6cqmin,26px);font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+.until b{font-weight:700;color:var(--fg)}
+.remain{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:auto}
+.remain-val{font-variation-settings:"wdth" 110;font-weight:800;font-variant-numeric:tabular-nums;
+  font-size:clamp(44px,8.5vmin,140px);font-size:clamp(44px,17cqmin,140px);line-height:.88;color:var(--state,var(--acc))}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;flex:none}
+.bar i{display:block;height:100%;width:0;background:var(--state,var(--acc));transition:width .9s linear}
+.idle .name,.idle .remain-val{color:var(--muted)}
+
+.next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:baseline;padding:0 4px;min-width:0}
+.next .lbl{grid-column:1/-1}
+.next .name{font-size:clamp(18px,2.7vmin,40px);font-size:clamp(18px,5.4cqmin,40px);color:var(--fg);-webkit-line-clamp:1}
+.next .in{font-variation-settings:"wdth" 110;font-weight:750;font-variant-numeric:tabular-nums;font-size:clamp(18px,2.7vmin,40px);font-size:clamp(18px,5.4cqmin,40px);color:var(--muted);text-align:right;white-space:nowrap}
+.next .when{font-family:var(--mono);font-size:clamp(11px,1.3vmin,15px);font-size:clamp(11px,2.6cqmin,15px);color:var(--muted);font-variant-numeric:tabular-nums}
+
+.later{list-style:none;margin:0;padding:6px 4px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+/* fixed height for 3 rows so both lanes line up even with different list lengths */
+.later{min-height:calc(3 * 1.35em + 6px + 6px)}
+.later li{line-height:1.35}
+.later{font-size:clamp(12px,1.4vmin,16px);font-size:clamp(12px,2.8cqmin,16px)}
+.later li{display:flex;gap:12px;color:var(--dim)}
+.later .t{font-family:var(--mono);font-variant-numeric:tabular-nums;flex:none}
+.later .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+/* wide, short lane (portrait iPad, or landscape with little height): now | next side by side */
+@container lane (min-aspect-ratio: 3/2){
+  .lane-in{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);column-gap:clamp(12px,3cqw,24px)}
+  .lane-head{grid-column:1/-1}
+  .now{grid-row:2}
+  .side{grid-row:2;grid-column:2;display:flex;flex-direction:column;gap:clamp(6px,3cqh,14px);min-height:0;min-width:0}
+  .now .name{font-size:clamp(24px,5.5vmin,72px);font-size:clamp(24px,11cqh,72px)}
+  .remain-val{font-size:clamp(40px,12.0vmin,140px);font-size:clamp(40px,24cqh,140px)}
+  .next{grid-template-columns:minmax(0,1fr)}
+  .next .name{font-size:clamp(20px,8cqh,40px);-webkit-line-clamp:2}
+  .next .in{text-align:left;font-size:clamp(22px,9cqh,44px);order:3}
+  .next .when{order:2}
+  .later{margin-top:auto}
+}
+.side{display:contents}
+@container lane (min-aspect-ratio: 3/2){.side{display:flex}}
+/* too little height for the list: drop it rather than squeeze */
+@container lane (max-height: 330px){.later{display:none}}
+
+/* last 5 minutes: time pulses brighter, box background pulses to 20% of the colour (red in the last minute) */
+@keyframes pulse{0%,100%{color:var(--acc);text-shadow:none}50%{color:var(--pulse);text-shadow:0 0 18px color-mix(in srgb,var(--pulse) 45%,transparent)}}
+.now.warn .remain-val{animation:pulse 2.4s ease-in-out infinite}
+@keyframes glow{0%,100%{background-color:#000}50%{background-color:color-mix(in srgb,var(--state) 20%,#000)}}
+.now.warn,.now.crit{animation:glow 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}.now.warn .remain-val{animation:none;color:var(--pulse)}.now.warn,.now.crit{animation:none;background-color:color-mix(in srgb,var(--state) 12%,#000)}}
+
+/* editor */
+.editor{position:fixed;inset:0;background:#000;display:flex;align-items:flex-start;justify-content:center;z-index:20;overflow:auto;
+  -webkit-user-select:text;user-select:text;
+  padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.editor .box{border:1px solid var(--line);border-radius:12px;padding:20px;width:min(720px,100%);box-sizing:border-box;display:flex;flex-direction:column;gap:12px}
+.editor h2{margin:0;font-size:22px;font-variation-settings:"wdth" 90}
+.editor p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+.editor code{font-family:var(--mono);color:var(--fg)}
+/* 16px keeps iPad Safari from zooming into the field */
+textarea{width:100%;box-sizing:border-box;height:min(46vh,420px);background:#000;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:16px/1.55 var(--mono);resize:none;-webkit-user-select:text;user-select:text}
+textarea:focus{outline:1px solid var(--muted)}
+.row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.row button{min-height:44px}
+.ed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+textarea{height:min(38vh,380px)}
+.saved{color:var(--fg);border-color:var(--muted)}
+.primary{color:var(--fg);border-color:var(--muted)}
+.err{color:var(--crit);font-family:var(--mono);font-size:14px}
+</style>
+
+<div class="app">
+  <header class="clock">
+    <div class="clock-top">
+      <span class="lbl" id="date">Light Night · Gaswerkhalle</span>
+      <div class="tools">
+        <button id="demoBtn" type="button">Demo</button>
+        <button id="fsBtn" type="button">Vollbild</button>
+        <button id="editBtn" type="button">Programm</button>
+      </div>
+    </div>
+    <div class="clock-time" id="clockBox"><span id="clockTxt">00:00<span class="sec">:00</span></span></div>
+  </header>
+
+  <main class="lanes" id="lanes"></main>
+</div>
+
+<div class="editor" id="editor" hidden>
+  <div class="box">
+    <!-- buttons on top: the iPad keyboard covers the lower half of the screen -->
+    <div class="ed-head">
+      <h2>Programm bearbeiten</h2>
+      <div class="row">
+        <button type="button" id="cancelBtn">Abbrechen</button>
+        <button type="button" class="primary" id="saveBtn">Speichern</button>
+      </div>
+    </div>
+    <div class="err" id="err" hidden></div>
+    <textarea id="schedText" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
+    <p>Eine Zeile pro Slot: <code>DJ 22:00-23:30 Name</code> oder <code>VJ 22:00-23:00 Name</code>. Die beiden Spuren laufen unabhängig voneinander. Zeiten nach Mitternacht einfach weiterschreiben (<code>00:30-02:00</code>), sie zählen zur selben Nacht. Gespeichert wird nur auf diesem Gerät.</p>
+    <div class="row"><button type="button" id="resetBtn">Beispiel laden</button></div>
+  </div>
+</div>
+
+<script>
+const LANES = ["VJ", "DJ"];
+const SAMPLE = `DJ 18:00-21:30 Warm-up (Beispiel)
+DJ 21:30-23:00 DJ Slot 1 (Beispiel)
+DJ 23:00-00:30 DJ Slot 2 (Beispiel)
+DJ 00:30-02:00 DJ Slot 3 (Beispiel)
+
+VJ 18:00-20:00 Ambient Visuals (Beispiel)
+VJ 20:00-20:20 Performance 1 (Beispiel)
+VJ 20:30-20:50 Performance 2 (Beispiel)
+VJ 21:00-21:20 Performance 3 (Beispiel)
+VJ 21:30-22:30 VJ Slot 1 (Beispiel)
+VJ 22:30-23:30 VJ Slot 2 (Beispiel)
+VJ 23:30-00:30 VJ Slot 3 (Beispiel)
+VJ 00:30-02:00 VJ Slot 4 (Beispiel)`;
+const KEY = "lightnight.schedule.v2";
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function load(){ try { return localStorage.getItem(KEY) || SAMPLE; } catch(e){ return SAMPLE; } }
+function store(t){ try { localStorage.setItem(KEY, t); } catch(e){} }
+
+// Times before 12:00 count as after midnight of the same night.
+function parse(text){
+  const out = { DJ: [], VJ: [] };
+  text.split("\n").forEach((raw, i) => {
+    const line = raw.trim(); if (!line) return;
+    const m = line.match(/^(DJ|VJ)\s+(\d{1,2})[:.](\d{2})\s*[-–]\s*(\d{1,2})[:.](\d{2})\s+(.+)$/i);
+    if (!m) throw new Error(`Zeile ${i+1} nicht lesbar: "${line}" – erwartet z.B. "DJ 22:00-23:30 Name"`);
+    const toMin = (h, mi) => (+h)*60 + (+mi) + ((+h) < 12 ? 1440 : 0);
+    let s = toMin(m[2], m[3]), e = toMin(m[4], m[5]);
+    if (e <= s) e += 1440;
+    out[m[1].toUpperCase()].push({ s, e, name: m[6].trim() });
+  });
+  LANES.forEach(l => out[l].sort((a,b) => a.s - b.s));
+  return out;
+}
+
+let sched;
+try { sched = parse(load()); } catch(e){ sched = parse(SAMPLE); }
+
+function nightSeconds(d){
+  let s = d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds();
+  if (d.getHours() < 12) s += 86400;
+  return s;
+}
+
+// Demo: builds slots around the current time so the live look can be checked any time of day.
+let demo = location.hash === "#demo";
+function demoSchedule(){
+  const nm = Math.floor(nightSeconds(new Date()) / 60);
+  const mk = (a, b, name) => ({ s: nm + a, e: nm + b, name });
+  return {
+    DJ: [mk(-145, -55, "Mira Kessler (Demo)"), mk(-55, 35, "Tobi Rhein (Demo)"), mk(35, 125, "Nachtfalter b2b Klang (Demo)"), mk(125, 215, "Selma Vogt (Demo)")],
+    VJ: [mk(-116, -56, "Pixelwerfer (Demo)"), mk(-56, 4, "Sun92 (Demo)"), mk(5, 65, "Lumen Kollektiv (Demo)"), mk(65, 125, "Noa Brandt (Demo)"), mk(125, 185, "Feedback Loop (Demo)")]
+  };
+}
+let demoSched = demoSchedule();
+const current = () => demo ? demoSched : sched;
+
+// Build the two lanes once; tick() only fills text.
+$("lanes").innerHTML = LANES.map(l => `
+  <section class="lane" data-lane="${l}">
+    <div class="lane-in">
+      <div class="lane-head"><span class="lane-tag">${l}</span></div>
+      <div class="now" data-r="card">
+        <span class="lbl">Jetzt</span>
+        <div class="name" data-r="name">–</div>
+        <div class="until" data-r="until"></div>
+        <div class="remain"><span class="lbl">Restzeit</span><span class="remain-val" data-r="remain">--:--</span></div>
+        <div class="bar"><i data-r="bar"></i></div>
+      </div>
+      <div class="side">
+        <div class="next">
+          <span class="lbl">Als Nächstes</span>
+          <div class="name" data-r="nname">–</div>
+          <div class="in" data-r="nin"></div>
+          <div class="when" data-r="nwhen"></div>
+        </div>
+        <ul class="later" data-r="later"></ul>
+      </div>
+    </div>
+  </section>`).join("");
+const R = {};
+LANES.forEach(l => {
+  R[l] = {};
+  document.querySelectorAll(`[data-lane="${l}"] [data-r]`).forEach(el => R[l][el.dataset.r] = el);
+});
+
+const hm = min => `${pad(Math.floor(min/60)%24)}:${pad(min%60)}`;
+function dur(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+const laterKey = {};
+function renderLane(l, n){
+  const list = current()[l], r = R[l];
+  const cur = list.find(x => n >= x.s*60 && n < x.e*60);
+  const upcoming = list.filter(x => x.s*60 > n);
+  const nxt = upcoming[0];
+
+  if (cur){
+    r.card.classList.remove("idle");
+    const left = cur.e*60 - n, total = (cur.e - cur.s)*60;
+    r.name.textContent = cur.name;
+    r.until.innerHTML = `${hm(cur.s)} – <b>bis ${hm(cur.e)}</b>`;
+    r.remain.textContent = dur(left);
+    r.bar.style.width = (100*(1 - left/total)).toFixed(2) + "%";
+    r.card.style.setProperty("--state", left <= 60 ? "var(--crit)" : "var(--acc)");
+    r.card.classList.toggle("warn", left <= 300 && left > 60);
+    r.card.classList.toggle("crit", left <= 60);
+  } else {
+    r.card.classList.add("idle");
+    r.card.classList.remove("warn", "crit");
+    r.card.style.removeProperty("--state");
+    const ended = list.length && n >= list[list.length-1].e*60;
+    r.name.textContent = nxt ? "Umbau / Pause" : (ended ? "Ende" : "Kein Slot");
+    r.until.innerHTML = nxt ? `<b>bis ${hm(nxt.s)}</b>` : "";
+    r.remain.textContent = nxt ? dur(nxt.s*60 - n) : "--:--";
+    r.bar.style.width = "0%";
+  }
+
+  if (nxt){
+    r.nname.textContent = nxt.name;
+    r.nwhen.textContent = `${hm(nxt.s)} – ${hm(nxt.e)}`;
+    r.nin.textContent = "in " + dur(nxt.s*60 - n);
+  } else {
+    r.nname.textContent = "–"; r.nwhen.textContent = "Kein weiterer Slot"; r.nin.textContent = "";
+  }
+
+  const rest = upcoming.slice(1, 4);
+  const k = rest.map(x => x.s + x.name).join("|");
+  if (laterKey[l] !== k){
+    laterKey[l] = k;
+    r.later.innerHTML = rest.map(x => `<li><span class="t">${hm(x.s)}–${hm(x.e)}</span><span class="n">${esc(x.name)}</span></li>`).join("");
+    r.later.hidden = !rest.length;
+  }
+}
+
+function tick(){
+  const d = new Date();
+  $("clockTxt").innerHTML = `${pad(d.getHours())}:${pad(d.getMinutes())}<span class="sec">:${pad(d.getSeconds())}</span>`;
+  $("date").textContent = (demo ? "DEMO · " : "") + "Light Night · Gaswerkhalle · " + d.toLocaleDateString("de-CH", { weekday:"long", day:"numeric", month:"long" });
+  $("demoBtn").textContent = demo ? "Live" : "Demo";
+  const n = nightSeconds(d);
+  LANES.forEach(l => renderLane(l, n));
+}
+tick();
+setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - Date.now() % 1000);
+
+// Clock size: measured, not vw-based, so it fills the width on any screen
+// (iPad, side panel, Quick Look) but never takes more than ~20% of the height.
+function fitClock(){
+  const box = $("clockBox"), txt = $("clockTxt");
+  const avail = box.clientWidth;
+  if (!avail) return;
+  box.style.fontSize = "100px";
+  const w = txt.getBoundingClientRect().width || 1;
+  const byWidth = 100 * avail * 0.98 / w;
+  const byHeight = window.innerHeight * 0.2 / 0.92;
+  box.style.fontSize = Math.max(40, Math.min(byWidth, byHeight)).toFixed(1) + "px";
+}
+fitClock();
+window.addEventListener("resize", fitClock);
+window.addEventListener("orientationchange", () => setTimeout(fitClock, 300));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitClock);
+if (window.ResizeObserver) new ResizeObserver(fitClock).observe($("clockBox"));
+
+// Editor
+$("editBtn").onclick = () => { $("schedText").value = load(); $("err").hidden = true; $("editor").hidden = false; };
+$("cancelBtn").onclick = () => { $("editor").hidden = true; };
+$("resetBtn").onclick = () => { $("schedText").value = SAMPLE; };
+$("saveBtn").onclick = () => {
+  // Saving always switches back to the real programme, otherwise the demo hides the change.
+  try {
+    sched = parse($("schedText").value); store($("schedText").value);
+    if (demo){ demo = false; try { history.replaceState(null, "", location.pathname + location.search); } catch(e){} }
+    LANES.forEach(l => laterKey[l] = null); tick(); $("editor").hidden = true;
+  }
+  catch(e){ $("err").textContent = e.message; $("err").hidden = false; }
+};
+$("demoBtn").onclick = () => {
+  demo = !demo;
+  if (demo) demoSched = demoSchedule();
+  try { history.replaceState(null, "", demo ? "#demo" : location.pathname + location.search); } catch(e){}
+  LANES.forEach(l => laterKey[l] = null); tick();
+};
+
+// Fullscreen (iPad Safari needs the webkit prefix) — hidden where unsupported
+const root = document.documentElement;
+const fsReq = root.requestFullscreen || root.webkitRequestFullscreen;
+if (!fsReq) $("fsBtn").hidden = true;
+$("fsBtn").onclick = async () => {
+  try {
+    const on = document.fullscreenElement || document.webkitFullscreenElement;
+    if (on) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else await fsReq.call(root);
+  } catch(e){}
+};
+
+// Keep the screen awake while visible
+async function wake(){ try { if ("wakeLock" in navigator && document.visibilityState === "visible") await navigator.wakeLock.request("screen"); } catch(e){} }
+wake(); document.addEventListener("visibilitychange", wake);
+</script>
