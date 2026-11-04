@@ -1,0 +1,449 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Light Night Stage Clock</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Light Night">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* iOS 12 safe (Safari 12, first-gen iPad Air 768x1024):
+   no clamp(), no flex gap, no container queries, no color-mix(), no inset, no var() inside @keyframes.
+   Sizes come from vw + orientation media queries; the clock is sized by script.
+   Layout: clock band on top; landscape = VJ | DJ side by side, portrait = VJ above DJ with now | next per lane.
+   Pure black, dimmed colours for a dark hall. */
+:root{
+  --bg:#000;
+  --line:#1c1c22;
+  --fg:#c9ccd4;
+  --muted:#5f6370;
+  --dim:#3a3d46;
+  --amber:#c98a3a;   /* VJ lane */
+  --blue:#4d86c9;    /* DJ lane */
+  --crit:#d2483e;
+  --display:"Archivo","Avenir Next Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",Menlo,Courier,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*:before,*:after{-webkit-box-sizing:border-box;box-sizing:border-box}
+html,body{height:100%;background:#000;overflow:hidden}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);margin:0;
+  -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;touch-action:manipulation;
+  padding-top:10px;padding-bottom:10px;
+  padding-left:16px;padding-right:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{height:100%;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;
+  -webkit-user-select:none;user-select:none}
+.lbl{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- clock ---------- */
+.clock{-webkit-flex:none;flex:none;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:12px}
+.clock-top{display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;-webkit-align-items:center;align-items:center}
+.clock-top .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}
+.tools{display:-webkit-flex;display:flex;-webkit-flex:none;flex:none}
+.tools button{margin-left:8px}
+.clock-time{font-variation-settings:"wdth" 125;font-weight:800;font-variant-numeric:tabular-nums;
+  font-size:120px;line-height:.92;letter-spacing:-.02em;text-align:center;white-space:nowrap;color:var(--fg);overflow:hidden}
+#clockTxt{display:inline-block}
+.clock-time .sec{color:var(--dim);font-weight:500}
+
+button{-webkit-appearance:none;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:#000;
+  border:1px solid var(--line);border-radius:8px;height:40px;padding:0 14px;cursor:pointer}
+button:active{color:var(--fg);border-color:var(--muted)}
+button:focus{outline:none;border-color:var(--muted)}
+@media (hover:hover){button:hover{color:var(--fg);border-color:var(--muted)}}
+
+/* ---------- lanes ---------- */
+.lanes{-webkit-flex:1 1 auto;flex:1 1 auto;min-height:0;display:-webkit-flex;display:flex}
+.lane{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;min-height:0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;overflow:hidden}
+.lane + .lane{margin-left:2.4vw}
+.lane{--acc:var(--blue)}
+.lane[data-lane="VJ"]{--acc:var(--amber)}
+
+.lane-head{-webkit-flex:none;flex:none;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:10px}
+.lane-tag{font-family:var(--mono);font-weight:700;letter-spacing:.2em;color:var(--acc);margin-right:10px}
+.lane-rule{-webkit-flex:1;flex:1;height:1px;background:var(--line)}
+
+.lane-body{-webkit-flex:1 1 auto;flex:1 1 auto;min-height:0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.now{-webkit-flex:1 1 auto;flex:1 1 auto;min-height:0;overflow:hidden;
+  border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:10px;background-color:#000;
+  display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.now.crit{border-top-color:var(--crit)}
+.now > * + *{margin-top:.5vh}
+.name{font-variation-settings:"wdth" 80;font-weight:800;line-height:1.02;word-wrap:break-word;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.until{font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+.until b{font-weight:700;color:var(--fg)}
+.remain{margin-top:auto!important;display:-webkit-flex;display:flex;-webkit-align-items:baseline;align-items:baseline;-webkit-justify-content:space-between;justify-content:space-between}
+.remain .lbl{margin-right:10px}
+.remain-val{font-variation-settings:"wdth" 110;font-weight:800;font-variant-numeric:tabular-nums;line-height:.88;color:var(--acc);white-space:nowrap}
+.now.crit .remain-val{color:var(--crit)}
+.bar{-webkit-flex:none;flex:none;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--acc);-webkit-transition:width .9s linear;transition:width .9s linear}
+.now.crit .bar i{background:var(--crit)}
+.idle .name,.idle .remain-val{color:var(--muted)}
+
+.side{-webkit-flex:none;flex:none;min-width:0}
+.next{padding:0 4px;min-width:0}
+.next-row{display:-webkit-flex;display:flex;-webkit-align-items:baseline;align-items:baseline}
+.next .name{-webkit-flex:1 1 auto;flex:1 1 auto;min-width:0;color:var(--fg);-webkit-line-clamp:1}
+.next .in{-webkit-flex:none;flex:none;margin-left:12px;font-variation-settings:"wdth" 110;font-weight:750;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.next .when{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+
+.later{list-style:none;margin:8px 0 0;padding:6px 4px 0;border-top:1px solid var(--line);min-width:0}
+.later li{display:-webkit-flex;display:flex;color:var(--dim);line-height:1.35}
+.later .t{font-family:var(--mono);font-variant-numeric:tabular-nums;-webkit-flex:none;flex:none;margin-right:12px}
+.later .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+/* ---------- landscape: lanes side by side, now card on top, next + list below ---------- */
+@media (orientation:landscape){
+  .lane-tag{font-size:1.6vw}
+  .now{padding:1.8vw}
+  .now .name{font-size:4.2vw}
+  .until{font-size:1.8vw}
+  .remain-val{font-size:9vw}
+  .side{margin-top:1.4vh}
+  .next .name,.next .in{font-size:2.6vw}
+  .next .when{font-size:1.2vw}
+  .later{font-size:1.4vw;min-height:calc(3 * 1.35 * 1.4vw + 7px)}
+  .lbl{font-size:1.15vw}
+}
+
+/* ---------- portrait: lanes stacked, now | next inside each lane ---------- */
+@media (orientation:portrait){
+  .lanes{-webkit-flex-direction:column;flex-direction:column}
+  .lane + .lane{margin-left:0;margin-top:2vh}
+  .lane-body{-webkit-flex-direction:row;flex-direction:row}
+  .now{-webkit-flex:1.55 1 0;flex:1.55 1 0;min-width:0;padding:2.2vw}
+  .side{-webkit-flex:1 1 0;flex:1 1 0;margin-left:3vw;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+  .lane-tag{font-size:2.4vw}
+  .now .name{font-size:5.2vw}
+  .until{font-size:2.4vw}
+  .remain-val{font-size:11vw}
+  .next-row{display:block}
+  .next .name{font-size:3.6vw;-webkit-line-clamp:2}
+  .next .in{display:block;margin-left:0;margin-top:.6vh;font-size:4vw}
+  .next .when{font-size:1.8vw}
+  .later{margin-top:auto;font-size:1.9vw}
+  .lbl{font-size:1.6vw}
+}
+
+/* ---------- phones: stack everything and allow scrolling ---------- */
+@media (max-width:600px){
+  html,body{overflow:auto}
+  .app{height:auto}
+  .lane-body{-webkit-flex-direction:column;flex-direction:column}
+  .now{-webkit-flex:none;flex:none;padding:14px}
+  .side{margin-left:0;margin-top:10px}
+  .lane-tag{font-size:14px}
+  .now .name{font-size:28px}
+  .until{font-size:16px}
+  .remain-val{font-size:56px}
+  .next .name{font-size:22px}
+  .next .in{font-size:22px}
+  .next .when,.lbl{font-size:11px}
+  .later{font-size:13px}
+  .remain{margin-top:10px!important}
+}
+
+/* ---------- last 5 minutes: brighter pulse on the time, box glows to 20% of the lane colour; red in the last minute.
+   Literal colours in keyframes: Safari 12 can't animate var() there. ---------- */
+@-webkit-keyframes tVJ{0%,100%{color:#c98a3a;text-shadow:none}50%{color:#ffc93c;text-shadow:0 0 18px rgba(255,201,60,.45)}}
+@keyframes tVJ{0%,100%{color:#c98a3a;text-shadow:none}50%{color:#ffc93c;text-shadow:0 0 18px rgba(255,201,60,.45)}}
+@-webkit-keyframes tDJ{0%,100%{color:#4d86c9;text-shadow:none}50%{color:#8cc4ff;text-shadow:0 0 18px rgba(140,196,255,.45)}}
+@keyframes tDJ{0%,100%{color:#4d86c9;text-shadow:none}50%{color:#8cc4ff;text-shadow:0 0 18px rgba(140,196,255,.45)}}
+@-webkit-keyframes gVJ{0%,100%{background-color:#000}50%{background-color:#281c0c}}
+@keyframes gVJ{0%,100%{background-color:#000}50%{background-color:#281c0c}}
+@-webkit-keyframes gDJ{0%,100%{background-color:#000}50%{background-color:#0f1b28}}
+@keyframes gDJ{0%,100%{background-color:#000}50%{background-color:#0f1b28}}
+@-webkit-keyframes gRed{0%,100%{background-color:#000}50%{background-color:#2a0e0c}}
+@keyframes gRed{0%,100%{background-color:#000}50%{background-color:#2a0e0c}}
+[data-lane="VJ"] .now.warn .remain-val{-webkit-animation:tVJ 2.4s ease-in-out infinite;animation:tVJ 2.4s ease-in-out infinite}
+[data-lane="DJ"] .now.warn .remain-val{-webkit-animation:tDJ 2.4s ease-in-out infinite;animation:tDJ 2.4s ease-in-out infinite}
+[data-lane="VJ"] .now.warn{-webkit-animation:gVJ 2.4s ease-in-out infinite;animation:gVJ 2.4s ease-in-out infinite}
+[data-lane="DJ"] .now.warn{-webkit-animation:gDJ 2.4s ease-in-out infinite;animation:gDJ 2.4s ease-in-out infinite}
+.now.crit{-webkit-animation:gRed 2.4s ease-in-out infinite;animation:gRed 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){
+  .bar i{-webkit-transition:none;transition:none}
+  .now.warn,.now.crit,.now.warn .remain-val{-webkit-animation:none!important;animation:none!important}
+  [data-lane="VJ"] .now.warn .remain-val{color:#ffc93c}
+  [data-lane="DJ"] .now.warn .remain-val{color:#8cc4ff}
+}
+
+/* ---------- editor (buttons on top: the keyboard covers the lower half) ---------- */
+.editor{position:fixed;top:0;right:0;bottom:0;left:0;background:#000;z-index:20;overflow:auto;-webkit-overflow-scrolling:touch;
+  -webkit-user-select:text;user-select:text;
+  padding-top:16px;padding-bottom:16px;padding-left:16px;padding-right:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.editor .box{border:1px solid var(--line);border-radius:12px;padding:20px;max-width:720px;margin:0 auto}
+.editor .box > * + *{margin-top:12px}
+.ed-head{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.editor h2{margin:0 12px 0 0;font-size:22px;font-variation-settings:"wdth" 90}
+.editor p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+.editor code{font-family:var(--mono);color:var(--fg)}
+.row{display:-webkit-flex;display:flex;-webkit-justify-content:flex-end;justify-content:flex-end;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.row button{height:44px;margin-left:8px}
+.primary{color:var(--fg);border-color:var(--muted)}
+.err{color:var(--crit);font-family:var(--mono);font-size:14px}
+/* 16px stops iOS Safari zooming into the field */
+textarea{display:block;width:100%;height:38vh;background:#000;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;
+  font:16px/1.55 var(--mono);resize:none;-webkit-appearance:none;-webkit-user-select:text;user-select:text}
+textarea:focus{outline:none;border-color:var(--muted)}
+</style>
+
+<div class="app">
+  <header class="clock">
+    <div class="clock-top">
+      <span class="lbl" id="date">Light Night · Gaswerkhalle</span>
+      <div class="tools">
+        <button id="demoBtn" type="button">Demo</button>
+        <button id="fsBtn" type="button">Vollbild</button>
+        <button id="editBtn" type="button">Programm</button>
+      </div>
+    </div>
+    <div class="clock-time" id="clockBox"><span id="clockTxt">00:00<span class="sec">:00</span></span></div>
+  </header>
+
+  <main class="lanes" id="lanes"></main>
+</div>
+
+<div class="editor" id="editor" hidden>
+  <div class="box">
+    <div class="ed-head">
+      <h2>Programm bearbeiten</h2>
+      <div class="row">
+        <button type="button" id="cancelBtn">Abbrechen</button>
+        <button type="button" class="primary" id="saveBtn">Speichern</button>
+      </div>
+    </div>
+    <div class="err" id="err" hidden></div>
+    <textarea id="schedText" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
+    <p>Eine Zeile pro Slot: <code>DJ 22:00-23:30 Name</code> oder <code>VJ 22:00-23:00 Name</code>. Die beiden Spuren laufen unabhängig voneinander. Zeiten nach Mitternacht einfach weiterschreiben (<code>00:30-02:00</code>), sie zählen zur selben Nacht. Gespeichert wird nur auf diesem Gerät.</p>
+    <div class="row"><button type="button" id="resetBtn">Beispiel laden</button></div>
+  </div>
+</div>
+
+<script>
+// Plain ES2017: no optional chaining, no ResizeObserver, no wake-lock requirement (Safari 12).
+var LANES = ["VJ", "DJ"];
+var SAMPLE = [
+  "DJ 18:00-21:30 Warm-up (Beispiel)",
+  "DJ 21:30-23:00 DJ Slot 1 (Beispiel)",
+  "DJ 23:00-00:30 DJ Slot 2 (Beispiel)",
+  "DJ 00:30-02:00 DJ Slot 3 (Beispiel)",
+  "",
+  "VJ 18:00-20:00 Ambient Visuals (Beispiel)",
+  "VJ 20:00-20:20 Performance 1 (Beispiel)",
+  "VJ 20:30-20:50 Performance 2 (Beispiel)",
+  "VJ 21:00-21:20 Performance 3 (Beispiel)",
+  "VJ 21:30-22:30 VJ Slot 1 (Beispiel)",
+  "VJ 22:30-23:30 VJ Slot 2 (Beispiel)",
+  "VJ 23:30-00:30 VJ Slot 3 (Beispiel)",
+  "VJ 00:30-02:00 VJ Slot 4 (Beispiel)"
+].join("\n");
+var KEY = "lightnight.schedule.v2";
+function $(id){ return document.getElementById(id); }
+function pad(n){ return (n < 10 ? "0" : "") + n; }
+function esc(s){ return s.replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+function load(){ try { return localStorage.getItem(KEY) || SAMPLE; } catch(e){ return SAMPLE; } }
+function store(t){ try { localStorage.setItem(KEY, t); return true; } catch(e){ return false; } }
+
+// Times before 12:00 count as after midnight of the same night.
+function parse(text){
+  var out = { DJ: [], VJ: [] };
+  text.split("\n").forEach(function(raw, i){
+    var line = raw.trim(); if (!line) return;
+    var m = line.match(/^(DJ|VJ)\s+(\d{1,2})[:.](\d{2})\s*[-–]\s*(\d{1,2})[:.](\d{2})\s+(.+)$/i);
+    if (!m) throw new Error("Zeile " + (i+1) + " nicht lesbar: \"" + line + "\" – erwartet z.B. \"DJ 22:00-23:30 Name\"");
+    function toMin(h, mi){ h = +h; return h*60 + (+mi) + (h < 12 ? 1440 : 0); }
+    var s = toMin(m[2], m[3]), e = toMin(m[4], m[5]);
+    if (e <= s) e += 1440;
+    out[m[1].toUpperCase()].push({ s: s, e: e, name: m[6].trim() });
+  });
+  LANES.forEach(function(l){ out[l].sort(function(a,b){ return a.s - b.s; }); });
+  return out;
+}
+
+var sched;
+try { sched = parse(load()); } catch(e){ sched = parse(SAMPLE); }
+
+function nightSeconds(d){
+  var s = d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds();
+  if (d.getHours() < 12) s += 86400;
+  return s;
+}
+
+// Demo: slots built around the current time.
+var demo = location.hash === "#demo";
+function demoSchedule(){
+  var nm = Math.floor(nightSeconds(new Date()) / 60);
+  function mk(a, b, name){ return { s: nm + a, e: nm + b, name: name }; }
+  return {
+    DJ: [mk(-145, -55, "Mira Kessler (Demo)"), mk(-55, 35, "Tobi Rhein (Demo)"), mk(35, 125, "Nachtfalter b2b Klang (Demo)"), mk(125, 215, "Selma Vogt (Demo)")],
+    VJ: [mk(-116, -56, "Pixelwerfer (Demo)"), mk(-56, 4, "Sun92 (Demo)"), mk(5, 65, "Lumen Kollektiv (Demo)"), mk(65, 125, "Noa Brandt (Demo)"), mk(125, 185, "Feedback Loop (Demo)")]
+  };
+}
+var demoSched = demoSchedule();
+function current(){ return demo ? demoSched : sched; }
+function setDemo(on){
+  demo = on;
+  if (on) demoSched = demoSchedule();
+  try { history.replaceState(null, "", on ? "#demo" : location.pathname + location.search); } catch(e){}
+  LANES.forEach(function(l){ laterKey[l] = null; });
+  tick();
+}
+
+// Build the two lanes once; tick() only fills text.
+$("lanes").innerHTML = LANES.map(function(l){
+  return '<section class="lane" data-lane="' + l + '">' +
+    '<div class="lane-head"><span class="lane-tag">' + l + '</span><span class="lane-rule"></span></div>' +
+    '<div class="lane-body">' +
+      '<div class="now" data-r="card">' +
+        '<span class="lbl">Jetzt</span>' +
+        '<div class="name" data-r="name">–</div>' +
+        '<div class="until" data-r="until"></div>' +
+        '<div class="remain"><span class="lbl">Restzeit</span><span class="remain-val" data-r="remain">--:--</span></div>' +
+        '<div class="bar"><i data-r="bar"></i></div>' +
+      '</div>' +
+      '<div class="side">' +
+        '<div class="next">' +
+          '<span class="lbl">Als Nächstes</span>' +
+          '<div class="next-row"><div class="name" data-r="nname">–</div><div class="in" data-r="nin"></div></div>' +
+          '<div class="when" data-r="nwhen"></div>' +
+        '</div>' +
+        '<ul class="later" data-r="later"></ul>' +
+      '</div>' +
+    '</div>' +
+  '</section>';
+}).join("");
+var R = {};
+LANES.forEach(function(l){
+  R[l] = {};
+  var els = document.querySelectorAll('[data-lane="' + l + '"] [data-r]');
+  for (var i = 0; i < els.length; i++) R[l][els[i].getAttribute("data-r")] = els[i];
+});
+
+function hm(min){ return pad(Math.floor(min/60) % 24) + ":" + pad(min % 60); }
+function dur(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  var h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return h ? h + ":" + pad(m) + ":" + pad(s) : pad(m) + ":" + pad(s);
+}
+function setClass(el, cls, on){ if (on) el.classList.add(cls); else el.classList.remove(cls); }
+
+var laterKey = {};
+function renderLane(l, n){
+  var list = current()[l], r = R[l];
+  var cur = null, upcoming = [];
+  list.forEach(function(x){
+    if (n >= x.s*60 && n < x.e*60) cur = x;
+    else if (x.s*60 > n) upcoming.push(x);
+  });
+  var nxt = upcoming[0];
+
+  if (cur){
+    var left = cur.e*60 - n, total = (cur.e - cur.s)*60;
+    setClass(r.card, "idle", false);
+    setClass(r.card, "warn", left <= 300 && left > 60);
+    setClass(r.card, "crit", left <= 60);
+    r.name.textContent = cur.name;
+    r.until.innerHTML = hm(cur.s) + " – <b>bis " + hm(cur.e) + "</b>";
+    r.remain.textContent = dur(left);
+    r.bar.style.width = (100*(1 - left/total)).toFixed(2) + "%";
+  } else {
+    setClass(r.card, "idle", true);
+    setClass(r.card, "warn", false);
+    setClass(r.card, "crit", false);
+    var ended = list.length && n >= list[list.length-1].e*60;
+    r.name.textContent = nxt ? "Umbau / Pause" : (ended ? "Ende" : "Kein Slot");
+    r.until.innerHTML = nxt ? "<b>bis " + hm(nxt.s) + "</b>" : "";
+    r.remain.textContent = nxt ? dur(nxt.s*60 - n) : "--:--";
+    r.bar.style.width = "0%";
+  }
+
+  if (nxt){
+    r.nname.textContent = nxt.name;
+    r.nwhen.textContent = hm(nxt.s) + " – " + hm(nxt.e);
+    r.nin.textContent = "in " + dur(nxt.s*60 - n);
+  } else {
+    r.nname.textContent = "–"; r.nwhen.textContent = "Kein weiterer Slot"; r.nin.textContent = "";
+  }
+
+  var rest = upcoming.slice(1, 4);
+  var k = rest.map(function(x){ return x.s + x.name; }).join("|");
+  if (laterKey[l] !== k){
+    laterKey[l] = k;
+    r.later.innerHTML = rest.map(function(x){
+      return '<li><span class="t">' + hm(x.s) + "–" + hm(x.e) + '</span><span class="n">' + esc(x.name) + "</span></li>";
+    }).join("");
+  }
+}
+
+var DAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+var MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+function tick(){
+  var d = new Date();
+  $("clockTxt").innerHTML = pad(d.getHours()) + ":" + pad(d.getMinutes()) + '<span class="sec">:' + pad(d.getSeconds()) + "</span>";
+  $("date").textContent = (demo ? "DEMO · " : "") + "Light Night · Gaswerkhalle · " + DAYS[d.getDay()] + ", " + d.getDate() + ". " + MONTHS[d.getMonth()];
+  $("demoBtn").textContent = demo ? "Live" : "Demo";
+  var n = nightSeconds(d);
+  LANES.forEach(function(l){ renderLane(l, n); });
+}
+tick();
+setTimeout(function(){ tick(); setInterval(tick, 1000); }, 1000 - Date.now() % 1000);
+
+// Clock: measured to fill the width, capped at ~20% of the screen height.
+function fitClock(){
+  var box = $("clockBox"), txt = $("clockTxt");
+  var avail = box.clientWidth;
+  if (!avail) return;
+  box.style.fontSize = "100px";
+  var w = txt.getBoundingClientRect().width || 1;
+  var byWidth = 100 * avail * 0.98 / w;
+  var byHeight = window.innerHeight * 0.2 / 0.92;
+  box.style.fontSize = Math.max(40, Math.min(byWidth, byHeight)).toFixed(1) + "px";
+}
+fitClock();
+window.addEventListener("resize", fitClock);
+window.addEventListener("orientationchange", function(){ setTimeout(fitClock, 300); setTimeout(fitClock, 900); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitClock);
+window.addEventListener("load", fitClock);
+
+// Editor
+$("editBtn").onclick = function(){ $("schedText").value = load(); $("err").hidden = true; $("editor").hidden = false; };
+$("cancelBtn").onclick = function(){ if (document.activeElement) document.activeElement.blur(); $("editor").hidden = true; };
+$("resetBtn").onclick = function(){ $("schedText").value = SAMPLE; };
+$("saveBtn").onclick = function(){
+  var text = $("schedText").value;
+  try { sched = parse(text); }
+  catch(e){ $("err").textContent = e.message; $("err").hidden = false; return; }
+  if (!store(text)){
+    $("err").textContent = "Konnte nicht dauerhaft speichern (privater Modus?). Das Programm gilt bis zum Neuladen.";
+    $("err").hidden = false;
+  }
+  if (document.activeElement) document.activeElement.blur();
+  $("editor").hidden = true;
+  setDemo(false); // saving always shows the real programme
+};
+$("demoBtn").onclick = function(){ setDemo(!demo); };
+
+// Fullscreen where the browser offers it (hidden otherwise; on iOS use "Zum Home-Bildschirm")
+var root = document.documentElement;
+var fsReq = root.requestFullscreen || root.webkitRequestFullscreen;
+if (!fsReq) $("fsBtn").hidden = true;
+$("fsBtn").onclick = function(){
+  try {
+    var on = document.fullscreenElement || document.webkitFullscreenElement;
+    if (on) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else fsReq.call(root);
+  } catch(e){}
+};
+
+// Keep the screen awake where supported (not on iOS 12: set Auto-Lock to "Never" there)
+function wake(){ try { if (navigator.wakeLock && document.visibilityState === "visible") navigator.wakeLock.request("screen").catch(function(){}); } catch(e){} }
+wake(); document.addEventListener("visibilitychange", wake);
+</script>
