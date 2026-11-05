@@ -2,7 +2,7 @@
 
 A single-page stage timetable for the Light Night at Gaswerkhalle. It shows a large clock and two independent lanes, **DJ** and **VJ**. Each lane shows the current slot ("Jetzt") with its remaining time and a progress bar, the next slot ("Als Nächstes"), and a short list of the slots after that.
 
-The page is a single `index.html` with no build step, served via GitHub Pages. It is written to run on old devices (Safari 12 / iOS 12, e.g. a first-generation iPad Air).
+The page is a single `index.html` with no build step, served via GitHub Pages. It is written to run on old devices (Safari 12 / iOS 12, e.g. a first-generation iPad Air) as well as modern, new devices. Old devices because many people have some older devices somewhere in a drawer and I want to give these old devices some use. 
 
 ## Usage
 
