@@ -4,6 +4,9 @@ A single-page stage timetable for the Light Night at Gaswerkhalle. It shows a la
 
 The page is a single `index.html` with no build step, served via GitHub Pages. It is written to run on old devices (Safari 12 / iOS 12, e.g. a first-generation iPad Air) as well as modern, new devices. Old devices because many people have some older devices somewhere in a drawer and I want to give these old devices some use. 
 
+You can directly use the online version at https://ghostrider.github.io/stage_timetable/ 
+
+
 ## Usage
 
 - **Schedule**: opens the editor. Enter one slot per line:
