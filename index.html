@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Light Night Stage Clock</title>
+<title>Stage Clock</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -196,7 +196,7 @@ textarea:focus{outline:none;border-color:var(--muted)}
 <div class="app">
   <header class="clock">
     <div class="clock-top">
-      <span class="lbl" id="date">Light Night · Gaswerkhalle</span>
+      <span class="lbl" id="date">Stage Clock</span>
       <div class="tools">
         <button id="demoBtn" type="button">Demo</button>
         <button id="fsBtn" type="button">Fullscreen</button>
@@ -220,7 +220,7 @@ textarea:focus{outline:none;border-color:var(--muted)}
     </div>
     <div class="err" id="err" hidden></div>
     <textarea id="schedText" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
-    <p>One line per slot: <code>DJ 22:00-23:30 Name</code> or <code>VJ 22:00-23:00 Name</code>. The two lanes run independently. Just keep writing times after midnight (<code>00:30-02:00</code>); they count as part of the same night. The schedule is saved on this device only.</p>
+    <p>Optional header lines: <code>Title: Light Night</code> and <code>Location: Gaswerkhalle</code>. One line per slot: <code>DJ 22:00-23:30 Name</code> or <code>VJ 22:00-23:00 Name</code>. The two lanes run independently. Just keep writing times after midnight (<code>00:30-02:00</code>); they count as part of the same night. The schedule is saved on this device only.</p>
     <div class="row"><button type="button" id="resetBtn">Load sample</button></div>
   </div>
 </div>
@@ -229,6 +229,9 @@ textarea:focus{outline:none;border-color:var(--muted)}
 // Plain ES2017: no optional chaining, no ResizeObserver, no wake-lock requirement (Safari 12).
 var LANES = ["VJ", "DJ"];
 var SAMPLE = [
+  "Title: Light Night",
+  "Location: Gaswerkhalle",
+  "",
   "DJ 18:00-19:30 Pajtim",
   "DJ 19:30-19:55 Sämi",
   "DJ 20:00-20:30 Sämi",
@@ -258,11 +261,13 @@ function store(t){ try { localStorage.setItem(KEY, t); return true; } catch(e){ 
 
 // Times before 12:00 count as after midnight of the same night.
 function parse(text){
-  var out = { DJ: [], VJ: [] };
+  var out = { DJ: [], VJ: [], title: "", location: "" };
   text.split("\n").forEach(function(raw, i){
     var line = raw.trim(); if (!line) return;
+    var meta = line.match(/^(title|location)\s*:\s*(.*)$/i);
+    if (meta){ out[meta[1].toLowerCase()] = meta[2].trim(); return; }
     var m = line.match(/^(DJ|VJ)\s+(\d{1,2})[:.](\d{2})\s*[-–]\s*(\d{1,2})[:.](\d{2})\s+(.+)$/i);
-    if (!m) throw new Error("Line " + (i+1) + " could not be read: \"" + line + "\" – expected e.g. \"DJ 22:00-23:30 Name\"");
+    if (!m) throw new Error("Line " + (i+1) + " could not be read: \"" + line + "\" – expected e.g. \"DJ 22:00-23:30 Name\" or \"Title: Name\"");
     function toMin(h, mi){ h = +h; return h*60 + (+mi) + (h < 12 ? 1440 : 0); }
     var s = toMin(m[2], m[3]), e = toMin(m[4], m[5]);
     if (e <= s) e += 1440;
@@ -274,6 +279,8 @@ function parse(text){
 
 var sched;
 try { sched = parse(load()); } catch(e){ sched = parse(SAMPLE); }
+function applyTitle(){ document.title = sched.title ? sched.title + " Stage Clock" : "Stage Clock"; }
+applyTitle();
 
 function nightSeconds(d){
   var s = d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds();
@@ -392,7 +399,8 @@ var MONTHS = ["January","February","March","April","May","June","July","August",
 function tick(){
   var d = new Date();
   $("clockTxt").innerHTML = pad(d.getHours()) + ":" + pad(d.getMinutes()) + '<span class="sec">:' + pad(d.getSeconds()) + "</span>";
-  $("date").textContent = (demo ? "DEMO · " : "") + "Light Night · Gaswerkhalle · " + DAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()];
+  var head = [sched.title, sched.location, DAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()]].filter(Boolean).join(" · ");
+  $("date").textContent = (demo ? "DEMO · " : "") + head;
   $("demoBtn").textContent = demo ? "Live" : "Demo";
   var n = nightSeconds(d);
   LANES.forEach(function(l){ renderLane(l, n); });
@@ -425,6 +433,7 @@ $("saveBtn").onclick = function(){
   var text = $("schedText").value;
   try { sched = parse(text); }
   catch(e){ $("err").textContent = e.message; $("err").hidden = false; return; }
+  applyTitle();
   if (!store(text)){
     $("err").textContent = "Could not save permanently (private mode?). The schedule applies until the page is reloaded.";
     $("err").hidden = false;

@@ -9,14 +9,17 @@ You can directly use the online version at https://ghostrider.github.io/stage_ti
 
 ## Usage
 
-- **Schedule**: opens the editor. Enter one slot per line:
+- **Schedule**: opens the editor. Optionally start with a title and location, then enter one slot per line:
 
   ```
+  Title: Light Night
+  Location: Gaswerkhalle
+
   DJ 22:00-23:30 Name
   VJ 22:00-23:00 Name
   ```
 
-  `.` also works as the time separator (`22.00`), and an en dash works in place of the hyphen. Empty lines are ignored. **Load sample** puts the built-in sample programme into the editor. Click **Save** to save it.
+  `.` also works as the time separator (`22.00`), and an en dash works in place of the hyphen. Empty lines are ignored. `Title:` and `Location:` are case-insensitive and both optional. They appear in the header next to the date ("Light Night · Gaswerkhalle · Thursday, 5 November"), and the title also sets the browser tab name. Without them, the header shows only the date. **Load sample** puts the built-in sample programme into the editor. Click **Save** to save it.
 - The schedule is stored in the browser's `localStorage` on **this device only**. Each device needs its own copy.
 - **Demo**: switches to generated demo slots around the current time, useful for checking the layout at any hour. Opening the page with `#demo` in the URL also starts demo mode.
 - **Fullscreen**: fullscreen, where the browser supports it. On iOS, use "Add to Home Screen" instead and set Auto-Lock to "Never".
