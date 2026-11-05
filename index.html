@@ -199,8 +199,8 @@ textarea:focus{outline:none;border-color:var(--muted)}
       <span class="lbl" id="date">Light Night · Gaswerkhalle</span>
       <div class="tools">
         <button id="demoBtn" type="button">Demo</button>
-        <button id="fsBtn" type="button">Vollbild</button>
-        <button id="editBtn" type="button">Programm</button>
+        <button id="fsBtn" type="button">Fullscreen</button>
+        <button id="editBtn" type="button">Schedule</button>
       </div>
     </div>
     <div class="clock-time" id="clockBox"><span id="clockTxt">00:00<span class="sec">:00</span></span></div>
@@ -212,16 +212,16 @@ textarea:focus{outline:none;border-color:var(--muted)}
 <div class="editor" id="editor" hidden>
   <div class="box">
     <div class="ed-head">
-      <h2>Programm bearbeiten</h2>
+      <h2>Edit schedule</h2>
       <div class="row">
-        <button type="button" id="cancelBtn">Abbrechen</button>
-        <button type="button" class="primary" id="saveBtn">Speichern</button>
+        <button type="button" id="cancelBtn">Cancel</button>
+        <button type="button" class="primary" id="saveBtn">Save</button>
       </div>
     </div>
     <div class="err" id="err" hidden></div>
     <textarea id="schedText" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
-    <p>Eine Zeile pro Slot: <code>DJ 22:00-23:30 Name</code> oder <code>VJ 22:00-23:00 Name</code>. Die beiden Spuren laufen unabhängig voneinander. Zeiten nach Mitternacht einfach weiterschreiben (<code>00:30-02:00</code>), sie zählen zur selben Nacht. Gespeichert wird nur auf diesem Gerät.</p>
-    <div class="row"><button type="button" id="resetBtn">Beispiel laden</button></div>
+    <p>One line per slot: <code>DJ 22:00-23:30 Name</code> or <code>VJ 22:00-23:00 Name</code>. The two lanes run independently. Just keep writing times after midnight (<code>00:30-02:00</code>); they count as part of the same night. The schedule is saved on this device only.</p>
+    <div class="row"><button type="button" id="resetBtn">Load sample</button></div>
   </div>
 </div>
 
@@ -262,7 +262,7 @@ function parse(text){
   text.split("\n").forEach(function(raw, i){
     var line = raw.trim(); if (!line) return;
     var m = line.match(/^(DJ|VJ)\s+(\d{1,2})[:.](\d{2})\s*[-–]\s*(\d{1,2})[:.](\d{2})\s+(.+)$/i);
-    if (!m) throw new Error("Zeile " + (i+1) + " nicht lesbar: \"" + line + "\" – erwartet z.B. \"DJ 22:00-23:30 Name\"");
+    if (!m) throw new Error("Line " + (i+1) + " could not be read: \"" + line + "\" – expected e.g. \"DJ 22:00-23:30 Name\"");
     function toMin(h, mi){ h = +h; return h*60 + (+mi) + (h < 12 ? 1440 : 0); }
     var s = toMin(m[2], m[3]), e = toMin(m[4], m[5]);
     if (e <= s) e += 1440;
@@ -307,15 +307,15 @@ $("lanes").innerHTML = LANES.map(function(l){
     '<div class="lane-head"><span class="lane-tag">' + l + '</span><span class="lane-rule"></span></div>' +
     '<div class="lane-body">' +
       '<div class="now" data-r="card">' +
-        '<span class="lbl">Jetzt</span>' +
+        '<span class="lbl">Now</span>' +
         '<div class="name" data-r="name">–</div>' +
         '<div class="until" data-r="until"></div>' +
-        '<div class="remain"><span class="lbl">Restzeit</span><span class="remain-val" data-r="remain">--:--</span></div>' +
+        '<div class="remain"><span class="lbl">Remaining</span><span class="remain-val" data-r="remain">--:--</span></div>' +
         '<div class="bar"><i data-r="bar"></i></div>' +
       '</div>' +
       '<div class="side">' +
         '<div class="next">' +
-          '<span class="lbl">Als Nächstes</span>' +
+          '<span class="lbl">Up next</span>' +
           '<div class="next-row"><div class="name" data-r="nname">–</div><div class="in" data-r="nin"></div></div>' +
           '<div class="when" data-r="nwhen"></div>' +
         '</div>' +
@@ -355,7 +355,7 @@ function renderLane(l, n){
     setClass(r.card, "warn", left <= 300 && left > 60);
     setClass(r.card, "crit", left <= 60);
     r.name.textContent = cur.name;
-    r.until.innerHTML = hm(cur.s) + " – <b>bis " + hm(cur.e) + "</b>";
+    r.until.innerHTML = hm(cur.s) + " – <b>until " + hm(cur.e) + "</b>";
     r.remain.textContent = dur(left);
     r.bar.style.width = (100*(1 - left/total)).toFixed(2) + "%";
   } else {
@@ -363,8 +363,8 @@ function renderLane(l, n){
     setClass(r.card, "warn", false);
     setClass(r.card, "crit", false);
     var ended = list.length && n >= list[list.length-1].e*60;
-    r.name.textContent = nxt ? "Umbau / Pause" : (ended ? "Ende" : "Kein Slot");
-    r.until.innerHTML = nxt ? "<b>bis " + hm(nxt.s) + "</b>" : "";
+    r.name.textContent = nxt ? "Changeover / Break" : (ended ? "Finished" : "No slot");
+    r.until.innerHTML = nxt ? "<b>until " + hm(nxt.s) + "</b>" : "";
     r.remain.textContent = nxt ? dur(nxt.s*60 - n) : "--:--";
     r.bar.style.width = "0%";
   }
@@ -374,7 +374,7 @@ function renderLane(l, n){
     r.nwhen.textContent = hm(nxt.s) + " – " + hm(nxt.e);
     r.nin.textContent = "in " + dur(nxt.s*60 - n);
   } else {
-    r.nname.textContent = "–"; r.nwhen.textContent = "Kein weiterer Slot"; r.nin.textContent = "";
+    r.nname.textContent = "–"; r.nwhen.textContent = "No further slots"; r.nin.textContent = "";
   }
 
   var rest = upcoming.slice(1, 4);
@@ -387,12 +387,12 @@ function renderLane(l, n){
   }
 }
 
-var DAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
-var MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 function tick(){
   var d = new Date();
   $("clockTxt").innerHTML = pad(d.getHours()) + ":" + pad(d.getMinutes()) + '<span class="sec">:' + pad(d.getSeconds()) + "</span>";
-  $("date").textContent = (demo ? "DEMO · " : "") + "Light Night · Gaswerkhalle · " + DAYS[d.getDay()] + ", " + d.getDate() + ". " + MONTHS[d.getMonth()];
+  $("date").textContent = (demo ? "DEMO · " : "") + "Light Night · Gaswerkhalle · " + DAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()];
   $("demoBtn").textContent = demo ? "Live" : "Demo";
   var n = nightSeconds(d);
   LANES.forEach(function(l){ renderLane(l, n); });
@@ -426,7 +426,7 @@ $("saveBtn").onclick = function(){
   try { sched = parse(text); }
   catch(e){ $("err").textContent = e.message; $("err").hidden = false; return; }
   if (!store(text)){
-    $("err").textContent = "Konnte nicht dauerhaft speichern (privater Modus?). Das Programm gilt bis zum Neuladen.";
+    $("err").textContent = "Could not save permanently (private mode?). The schedule applies until the page is reloaded.";
     $("err").hidden = false;
   }
   if (document.activeElement) document.activeElement.blur();
@@ -435,7 +435,7 @@ $("saveBtn").onclick = function(){
 };
 $("demoBtn").onclick = function(){ setDemo(!demo); };
 
-// Fullscreen where the browser offers it (hidden otherwise; on iOS use "Zum Home-Bildschirm")
+// Fullscreen where the browser offers it (hidden otherwise; on iOS use "Add to Home Screen")
 var root = document.documentElement;
 var fsReq = root.requestFullscreen || root.webkitRequestFullscreen;
 if (!fsReq) $("fsBtn").hidden = true;
