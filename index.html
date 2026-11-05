@@ -97,7 +97,6 @@ button:focus{outline:none;border-color:var(--muted)}
 .later li{display:-webkit-flex;display:flex;color:var(--dim);line-height:1.35}
 .later .t{font-family:var(--mono);font-variant-numeric:tabular-nums;-webkit-flex:none;flex:none;margin-right:12px}
 .later .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-
 /* ---------- landscape: lanes side by side, now card on top, next + list below ---------- */
 @media (orientation:landscape){
   .lane-tag{font-size:1.6vw}
@@ -235,14 +234,16 @@ var SAMPLE = [
   "DJ 23:00-00:30 DJ Slot 2 (Beispiel)",
   "DJ 00:30-02:00 DJ Slot 3 (Beispiel)",
   "",
-  "VJ 18:00-20:00 Ambient Visuals (Beispiel)",
-  "VJ 20:00-20:20 Performance 1 (Beispiel)",
-  "VJ 20:30-20:50 Performance 2 (Beispiel)",
-  "VJ 21:00-21:20 Performance 3 (Beispiel)",
-  "VJ 21:30-22:30 VJ Slot 1 (Beispiel)",
-  "VJ 22:30-23:30 VJ Slot 2 (Beispiel)",
-  "VJ 23:30-00:30 VJ Slot 3 (Beispiel)",
-  "VJ 00:30-02:00 VJ Slot 4 (Beispiel)"
+  "VJ 18:00-19:30 Ambient Visuals",
+  "VJ 19:30-19:55 Dante",
+  "VJ 20:00-20:30 ANKA",
+  "VJ 20:35-21:05 Luis",
+  "VJ 21:10-21:35 Pedro",
+  "VJ 21:35-23:00 Anka",
+  "VJ 23:00-23:30 1000A",
+  "VJ 23:30-01:00 Luis",
+  "VJ 01:00-01:30 1000A",
+  "VJ 01:30-03:00 Visual Jam"
 ].join("\n");
 var KEY = "lightnight.schedule.v2";
 function $(id){ return document.getElementById(id); }
