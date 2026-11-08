@@ -6,6 +6,8 @@ The page is a single `index.html` with no build step, served via GitHub Pages. I
 
 You can directly use the online version at https://ghostrider.github.io/stage_timetable/ 
 
+![Stage clock in demo mode, with the large clock on top and the VJ and DJ lanes below](docs/screenshot.png)
+
 
 ## Usage
 
@@ -36,3 +38,7 @@ This means that **in the morning (before 12:00) the page treats the night as fin
 To check a programme before noon, use the **Demo** mode or wait until 12:00.
 
 The roll-over hour is set in two places in `index.html`: `toMin()` inside `parse()` (`h < 12`) and `nightSeconds()` (`d.getHours() < 12`). If you change it, change both to the same hour. Slots must not start or end after that hour following midnight.
+
+## License
+
+MIT, see [LICENSE](LICENSE). (c) Uli "1000A" Staudinger 2026.

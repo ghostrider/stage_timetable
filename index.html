@@ -56,6 +56,8 @@ button:active{color:var(--fg);border-color:var(--muted)}
 button:focus{outline:none;border-color:var(--muted)}
 @media (hover:hover){button:hover{color:var(--fg);border-color:var(--muted)}}
 
+.copy{-webkit-flex:none;flex:none;margin-top:6px;text-align:right;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dim)}
+
 /* ---------- lanes ---------- */
 .lanes{-webkit-flex:1 1 auto;flex:1 1 auto;min-height:0;display:-webkit-flex;display:flex}
 .lane{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;min-height:0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;overflow:hidden}
@@ -207,6 +209,7 @@ textarea:focus{outline:none;border-color:var(--muted)}
   </header>
 
   <main class="lanes" id="lanes"></main>
+  <footer class="copy">&copy; Uli &ldquo;1000A&rdquo; Staudinger 2026</footer>
 </div>
 
 <div class="editor" id="editor" hidden>
